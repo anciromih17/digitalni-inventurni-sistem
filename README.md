@@ -40,6 +40,8 @@ Namen inventurnega sistema je poenostavitev procesa popisa inventure, izboljšan
 **2\. Storitev - Inventar opreme**
 
 - seznam opreme
+- dodajanje kosov oprme,
+- brisanje, posodabljanje seznamov
 - kategorije, subkategorije
 - lokacije opreme
 - stanje (na voljo, rezervirano, izposojeno, za popravilo)
