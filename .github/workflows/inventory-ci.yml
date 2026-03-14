@@ -1,0 +1,55 @@
+name: Inventory Service CI
+
+on:
+  push:
+    paths:
+      - "inventar/**"
+  pull_request:
+    paths:
+      - "inventar/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: inventar
+
+    services:
+      postgres:
+        image: postgres:15.17
+        env:
+          POSTGRES_DB: inventorydb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d inventorydb"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      PORT: 8000
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: inventorydb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
