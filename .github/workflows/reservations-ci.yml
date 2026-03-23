@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - "rezervacije/**"
+      - ".github/workflows/reservations-ci.yml"
   pull_request:
     paths:
       - "rezervacije/**"
+      - ".github/workflows/reservations-ci.yml"
 
 jobs:
   test:

@@ -1,6 +1,7 @@
 import os
 import grpc
-from app.grpc import inventory_pb2, inventory_pb2_grpc
+import app.grpc.inventory_pb2 as inventory_pb2
+import app.grpc.inventory_pb2_grpc as inventory_pb2_grpc
 
 INVENTORY_GRPC_HOST = os.getenv("INVENTORY_GRPC_HOST", "localhost:50051")
 
