@@ -109,6 +109,32 @@ async function searchItems({ category, status, location }) {
     return result.rows;
 }
 
+async function reserveItemQuantity(id, quantity) {
+    const query = `
+    UPDATE items
+    SET available_quantity = available_quantity - $1,
+        status = CASE
+          WHEN (available_quantity - $1) <= 0 THEN 'OUT_OF_STOCK'
+          WHEN (available_quantity - $1) < quantity THEN 'LOW_STOCK'
+          ELSE 'AVAILABLE'
+        END,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2 AND available_quantity >= $1
+    RETURNING *;
+  `;
+
+    const result = await pool.query(query, [quantity, id]);
+    return result.rows[0];
+}
+
+async function getItemAvailability(id) {
+    const result = await pool.query(
+        "SELECT id, available_quantity, status FROM items WHERE id = $1",
+        [id]
+    );
+    return result.rows[0];
+}
+
 module.exports = {
     createItem,
     getAllItems,
@@ -116,4 +142,6 @@ module.exports = {
     updateItem,
     deleteItem,
     searchItems,
+    reserveItemQuantity,
+    getItemAvailability,
 };

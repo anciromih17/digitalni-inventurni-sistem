@@ -14,4 +14,8 @@ app.get("/health", (req, res) => {
     res.status(200).json({ message: "Inventory service is running." });
 });
 
+app.get("/", (req, res) => {
+  res.redirect("/api/docs");
+});
+
 module.exports = app;

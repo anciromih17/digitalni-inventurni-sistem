@@ -1,0 +1,49 @@
+# ======================
+# Node
+# ======================
+node_modules/
+npm-debug.log
+package-lock.json
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+
+# ======================
+# Docker
+# ======================
+docker-data/
+*.log
+
+# ======================
+# OS
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# IDE
+# ======================
+.vscode/
+.idea/
+
+# ======================
+# PostgreSQL volumes
+# ======================
+inventory_postgres_data/
+reservations_postgres_data/
+
+# ======================
+# gRPC generated files
+# ======================
+*_pb2.py
+*_pb2_grpc.py
