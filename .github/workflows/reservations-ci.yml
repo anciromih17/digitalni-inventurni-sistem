@@ -1,0 +1,64 @@
+name: Reservations Service CI
+
+on:
+  push:
+    paths:
+      - "rezervacije/**"
+      - ".github/workflows/reservations-ci.yml"
+  pull_request:
+    paths:
+      - "rezervacije/**"
+      - ".github/workflows/reservations-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: reservationsdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d reservationsdb"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: reservationsdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      INVENTORY_GRPC_HOST: localhost:50051
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          cd rezervacije
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate gRPC files
+        run: |
+          cd rezervacije
+          python -m grpc_tools.protoc -I./app/grpc --python_out=./app/grpc --grpc_python_out=./app/grpc ./app/grpc/inventory.proto
+          sed -i 's/^import inventory_pb2 as inventory__pb2/from app.grpc import inventory_pb2 as inventory__pb2/' app/grpc/inventory_pb2_grpc.py
+
+      - name: Run tests
+        run: |
+          cd rezervacije
+          pytest
