@@ -50,6 +50,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Generate gRPC files
+        run: |
+          cd rezervacije
+          python -m grpc_tools.protoc -I./app/grpc --python_out=./app/grpc --grpc_python_out=./app/grpc ./app/grpc/inventory.proto
+          sed -i 's/^import inventory_pb2 as inventory__pb2/from app.grpc import inventory_pb2 as inventory__pb2/' app/grpc/inventory_pb2_grpc.py
+
       - name: Run tests
         run: |
           cd rezervacije
