@@ -1,43 +1,68 @@
 services:
   inventory-db:
-    image: postgres:15.17
+    image: postgres:15
     container_name: inventory-db
     environment:
       POSTGRES_DB: inventorydb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - inventory_postgres_data:/var/lib/postgresql/data
-
-  inventory-service:
-    build: ./inventar
-    container_name: inventory-service
-    depends_on:
-      - inventory-db
-    environment:
-      PORT: 8000
-      DB_HOST: inventory-db
-      DB_PORT: 5432
-      DB_NAME: inventorydb
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-    ports:
-      - "8000:8000"
-      - "50051:50051"
+      - inventory_db_data:/var/lib/postgresql/data
 
   reservations-db:
-    image: postgres:15.17
+    image: postgres:15
     container_name: reservations-db
     environment:
       POSTGRES_DB: reservationsdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
-      - reservations_postgres_data:/var/lib/postgresql/data
+      - reservations_db_data:/var/lib/postgresql/data
+
+  users-db:
+    image: mongo:6
+    container_name: users-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - users_db_data:/data/db
+
+  activemq:
+    image: rmohr/activemq:5.15.9
+    container_name: activemq
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+      - "61613:61613"
+    environment:
+      ACTIVEMQ_ADMIN_LOGIN: admin
+      ACTIVEMQ_ADMIN_PASSWORD: admin
+    volumes:
+      - activemq_data:/opt/activemq/data
+
+  inventory-service:
+    build: ./inventar
+    container_name: inventory-service
+    depends_on:
+      - inventory-db
+      - activemq
+    ports:
+      - "8000:8000"
+      - "50051:50051"
+    environment:
+      DB_HOST: inventory-db
+      DB_PORT: 5432
+      DB_NAME: inventorydb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      ACTIVEMQ_HOST: activemq
+      ACTIVEMQ_PORT: 61613
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
 
   reservations-service:
     build: ./rezervacije
@@ -45,6 +70,9 @@ services:
     depends_on:
       - reservations-db
       - inventory-service
+      - activemq
+    ports:
+      - "8001:8001"
     environment:
       DB_HOST: reservations-db
       DB_PORT: 5432
@@ -52,9 +80,29 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       INVENTORY_GRPC_HOST: inventory-service:50051
+      ACTIVEMQ_HOST: activemq
+      ACTIVEMQ_PORT: 61613
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
+
+  users-service:
+    build: ./uporabniki
+    container_name: users-service
+    depends_on:
+      - users-db
+      - activemq
     ports:
-      - "8001:8001"
+      - "8002:8002"
+    environment:
+      SPRING_DATA_MONGODB_HOST: users-db
+      SPRING_DATA_MONGODB_PORT: 27017
+      ACTIVEMQ_HOST: activemq
+      ACTIVEMQ_PORT: 61616
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
 
 volumes:
-  inventory_postgres_data:
-  reservations_postgres_data:
+  inventory_db_data:
+  reservations_db_data:
+  users_db_data:
+  activemq_data:

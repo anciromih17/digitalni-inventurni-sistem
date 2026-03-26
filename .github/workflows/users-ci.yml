@@ -1,0 +1,31 @@
+name: Users Service CI
+
+on:
+    push:
+        paths:
+            - "uporabniki/**"
+            - ".github/workflows/users-ci.yml"
+    pull_request:
+        paths:
+            - "uporabniki/**"
+
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest
+
+        defaults:
+            run:
+                working-directory: uporabniki
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up JDK 17
+              uses: actions/setup-java@v4
+              with:
+                  distribution: "temurin"
+                  java-version: "17"
+
+            - name: Build and run tests
+              run: mvn test
