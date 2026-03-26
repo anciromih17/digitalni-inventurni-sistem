@@ -38,6 +38,8 @@ jobs:
       DB_NAME: inventorydb
       DB_USER: postgres
       DB_PASSWORD: postgres
+      NODE_ENV: test
+      MQ_ENABLED: "false"
 
     steps:
       - name: Checkout repository
