@@ -1,4 +1,5 @@
 const itemService = require("../services/itemService");
+const { sendEvent } = require('../mq/mqProducer');
 
 async function createItem(req, res) {
     try {
@@ -7,6 +8,13 @@ async function createItem(req, res) {
         const item = await itemService.createItem(req.body);
 
         console.log("[CREATE ITEM] Item created with ID:", item.id);
+
+        sendEvent({
+            eventType: "ITEM_CREATED",
+            source: "inventory-service",
+            itemId: item.id,
+            name: item.name
+        });
 
         return res.status(201).json(item);
     } catch (error) {
@@ -56,6 +64,12 @@ async function updateItem(req, res) {
 
         console.log("[UPDATE ITEM] Item updated:", item.id);
 
+        sendEvent({
+            eventType: "ITEM_UPDATED",
+            source: "inventory-service",
+            itemId: item.id
+        });
+
         return res.status(200).json(item);
     } catch (error) {
         console.error("[UPDATE ITEM ERROR]", error.message);
@@ -72,6 +86,12 @@ async function deleteItem(req, res) {
         await itemService.deleteItem(req.params.id);
 
         console.log("[DELETE ITEM] Item deleted:", req.params.id);
+
+        sendEvent({
+            eventType: "ITEM_DELETED",
+            source: "inventory-service",
+            itemId: req.params.id
+        });
 
         return res.status(204).send();
     } catch (error) {

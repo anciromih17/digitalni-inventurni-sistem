@@ -1,13 +1,10 @@
-# ======================
 # Node
-# ======================
 node_modules/
 npm-debug.log
 package-lock.json
+.env
 
-# ======================
 # Python
-# ======================
 __pycache__/
 *.pyc
 *.pyo
@@ -18,32 +15,31 @@ venv/
 .pytest_cache/
 .mypy_cache/
 
-# ======================
+# Java / Maven
+target/
+*.log
+*.class
+*.jar
+*.war
+
 # Docker
-# ======================
 docker-data/
 *.log
+mongo-data/
+postgres-data/
 
-# ======================
 # OS
-# ======================
 .DS_Store
 Thumbs.db
 
-# ======================
 # IDE
-# ======================
 .vscode/
 .idea/
 
-# ======================
 # PostgreSQL volumes
-# ======================
 inventory_postgres_data/
 reservations_postgres_data/
 
-# ======================
 # gRPC generated files
-# ======================
 *_pb2.py
 *_pb2_grpc.py

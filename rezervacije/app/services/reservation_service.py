@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.repositories import reservation_repository
 from app.grpc.grpc_client import get_item_availability, reserve_item
+from app.mq.mq_producer import producer
 
 def create_reservation(db: Session, reservation):
     print(f"[CREATE RESERVATION] Request for item_id={reservation.item_id}, quantity={reservation.quantity}")
@@ -22,7 +23,20 @@ def create_reservation(db: Session, reservation):
     if not reserve_response.success:
         raise ValueError(reserve_response.message)
 
-    return reservation_repository.create_reservation(db, reservation)
+    saved_reservation = reservation_repository.create_reservation(db, reservation)
+
+    try:
+        producer.send_event({
+            "eventType": "RESERVATION_CREATED",
+            "source": "reservations-service",
+            "reservationId": saved_reservation.id,
+            "itemId": saved_reservation.item_id,
+            "reservedBy": saved_reservation.reserved_by
+        })
+    except Exception as e:
+        print("[ActiveMQ ERROR] Failed to send reservation event:", str(e))
+
+    return saved_reservation
 
 def get_all_reservations(db: Session):
     return reservation_repository.get_all_reservations(db)

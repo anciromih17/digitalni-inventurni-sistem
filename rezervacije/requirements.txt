@@ -8,3 +8,4 @@ pytest
 httpx
 grpcio
 grpcio-tools
+stomp.py

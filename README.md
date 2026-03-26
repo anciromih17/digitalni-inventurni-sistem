@@ -78,3 +78,34 @@ Namen inventurnega sistema je poenostavitev procesa popisa inventure, izboljšan
   - equipment_returned
   - reservation_created
   - reservation_approved
+
+**Docker porti:**
+| Storitev    | Port  |
+| ----------- | ----- |
+| Inventar    | 8000  |
+| Rezervacije | 8001  |
+| Uporabniki  | 8002  |
+| ActiveMQ    | 8161  |
+| MongoDB     | 27017 |
+| PostgreSQL  | 5432  |
+
+**Arhitektura sistema:**
+| Mikrostoritev | Tehnologija         | Baza       |
+| ------------- | ------------------- | ---------- |
+| Inventar      | Node.js + Express   | PostgreSQL |
+| Rezervacije   | FastAPI + gRPC      | PostgreSQL |
+| Uporabniki    | Spring Boot WebFlux | MongoDB    |
+
+**ActiveMQ**
+| Mikrostoritev | Event                 | Kdaj se sproži             | Queue              |
+| ------------- | --------------------- | -------------------------- | ------------------ |
+| Inventar      | ITEM_CREATED          | Ko ustvarimo novo opremo   | inventory.events   |
+| Inventar      | ITEM_UPDATED          | Ko posodobimo opremo       | inventory.events   |
+| Inventar      | ITEM_DELETED          | Ko izbrišemo opremo        | inventory.events   |
+| Rezervacije   | RESERVATION_CREATED   | Ko ustvarimo rezervacijo   | reservation.events |
+| Rezervacije   | RESERVATION_CONFIRMED | Ko potrdimo rezervacijo    | reservation.events |
+| Rezervacije   | RESERVATION_CANCELLED | Ko prekličemo rezervacijo  | reservation.events |
+| Uporabniki    | USER_REGISTERED       | Ko se uporabnik registrira | user.events        |
+| Uporabniki    | USER_ROLE_CHANGED     | Ko se spremeni vloga       | user.events        |
+| Uporabniki    | USER_DELETED          | Ko izbrišemo uporabnika    | user.events        |
+
