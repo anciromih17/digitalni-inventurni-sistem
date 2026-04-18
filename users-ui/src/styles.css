@@ -1,0 +1,161 @@
+.domain *,
+.domain *::before,
+.domain *::after {
+  box-sizing: border-box;
+}
+
+.domain {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: transparent;
+  display: grid;
+  gap: 18px;
+}
+
+.domain button,
+.domain input,
+.domain select,
+.domain textarea {
+  font: inherit;
+}
+
+.domain-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.domain-header h2,
+.panel h3 {
+  margin: 0 0 8px;
+}
+
+.domain-header p,
+.feedback {
+  margin: 0;
+  color: #5f5a5a;
+}
+
+.feedback {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f2f7f9;
+  border: 1px solid #d6e1e6;
+}
+
+.domain-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfe 100%);
+  border: 1px solid #d7e2e7;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.form-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lookup {
+  margin-top: 16px;
+}
+
+.domain label {
+  display: grid;
+  gap: 6px;
+  color: #41545e;
+  font-size: 0.95rem;
+}
+
+.domain input,
+.domain select,
+.domain textarea {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #b9c7cf;
+  background: #fbfdfe;
+}
+
+.button-row,
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.domain button {
+  cursor: pointer;
+  border: 1px solid #345d75;
+  background: #345d75;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.domain .ghost-button {
+  background: white;
+  color: #345d75;
+}
+
+.domain .danger-button {
+  border-color: #9b3927;
+  background: #9b3927;
+}
+
+.domain .table-wrap {
+  overflow-x: auto;
+}
+
+.domain table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.domain th,
+.domain td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e6edf1;
+  text-align: left;
+  vertical-align: top;
+}
+
+.domain th {
+  color: #607580;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.domain pre {
+  white-space: pre-wrap;
+  background: #f7fafb;
+  border: 1px solid #dde6eb;
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 120px;
+  overflow: auto;
+}
+
+@media (max-width: 960px) {
+  .domain .domain-grid,
+  .domain .form-grid,
+  .domain .form-grid.compact {
+    grid-template-columns: 1fr;
+  }
+
+  .domain .domain-header {
+    flex-direction: column;
+  }
+}

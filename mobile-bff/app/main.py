@@ -4,11 +4,20 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Mobile BFF",
     description="Backend for frontend gateway for a mobile client",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 INVENTORY_URL = os.getenv("INVENTORY_SERVICE_URL", "http://inventory-service:8000")
