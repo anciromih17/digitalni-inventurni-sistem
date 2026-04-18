@@ -101,6 +101,35 @@ services:
       ACTIVEMQ_USER: admin
       ACTIVEMQ_PASSWORD: admin
 
+  web-bff:
+    build: ./web-bff
+    container_name: web-bff
+    depends_on:
+      - inventory-service
+      - reservations-service
+      - users-service
+    ports:
+      - "8010:8010"
+    environment:
+      PORT: 8010
+      INVENTORY_SERVICE_URL: http://inventory-service:8000
+      RESERVATIONS_SERVICE_URL: http://reservations-service:8001
+      USERS_SERVICE_URL: http://users-service:8002
+
+  mobile-bff:
+    build: ./mobile-bff
+    container_name: mobile-bff
+    depends_on:
+      - inventory-service
+      - reservations-service
+      - users-service
+    ports:
+      - "8011:8011"
+    environment:
+      INVENTORY_SERVICE_URL: http://inventory-service:8000
+      RESERVATIONS_SERVICE_URL: http://reservations-service:8001
+      USERS_SERVICE_URL: http://users-service:8002
+
 volumes:
   inventory_db_data:
   reservations_db_data:

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.reservation import Reservation
-from datetime import datetime
+from datetime import datetime, timezone
 
 def create_reservation(db: Session, reservation_data):
     reservation = Reservation(**reservation_data.dict())
@@ -24,7 +24,7 @@ def update_reservation(db: Session, reservation_id: int, update_data):
     for key, value in update_data.dict(exclude_unset=True).items():
         setattr(reservation, key, value)
 
-    reservation.updated_at = datetime.utcnow()
+    reservation.updated_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(reservation)
@@ -50,3 +50,22 @@ def search_reservations(db: Session, status: str = None, reserved_by: str = None
         query = query.filter(Reservation.reserved_by == reserved_by)
 
     return query.all()
+
+def return_reservation_items(db: Session, reservation_id: int, quantity: int):
+    reservation = db.query(Reservation).filter(Reservation.id == reservation_id).first()
+
+    if not reservation:
+        return None
+
+    reservation.returned_quantity += quantity
+
+    if reservation.returned_quantity >= reservation.quantity:
+        reservation.status = "RETURNED"
+    else:
+        reservation.status = "PARTIALLY_RETURNED"
+
+    reservation.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(reservation)
+    return reservation

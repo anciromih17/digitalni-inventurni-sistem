@@ -5,6 +5,7 @@ package inventory;
 service InventoryGrpcService {
   rpc GetItemAvailability (ItemRequest) returns (ItemAvailabilityResponse);
   rpc ReserveItem (ReserveItemRequest) returns (ReserveItemResponse);
+  rpc ReturnItem (ReturnItemRequest) returns (ReturnItemResponse);
 }
 
 message ItemRequest {
@@ -23,6 +24,16 @@ message ReserveItemRequest {
 }
 
 message ReserveItemResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ReturnItemRequest {
+  int32 item_id = 1;
+  int32 quantity = 2;
+}
+
+message ReturnItemResponse {
   bool success = 1;
   string message = 2;
 }
