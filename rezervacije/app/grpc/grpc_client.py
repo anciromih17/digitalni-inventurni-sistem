@@ -23,3 +23,14 @@ def reserve_item(item_id: int, quantity: int):
             )
         )
         return response
+
+def return_item(item_id: int, quantity: int):
+    with grpc.insecure_channel(INVENTORY_GRPC_HOST) as channel:
+        stub = inventory_pb2_grpc.InventoryGrpcServiceStub(channel)
+        response = stub.ReturnItem(
+            inventory_pb2.ReturnItemRequest(
+                item_id=item_id,
+                quantity=quantity
+            )
+        )
+        return response

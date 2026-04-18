@@ -23,7 +23,20 @@ class ReservationUpdate(BaseModel):
 
 class ReservationResponse(ReservationBase):
     id: int
+    returned_quantity: int
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class ReservationReturnRequest(BaseModel):
+    quantity: Optional[int] = None
+
+class ReservationReturnResponse(BaseModel):
+    reservation_id: int
+    item_id: int
+    returned_quantity: int
+    total_returned_quantity: int
+    remaining_quantity: int
+    status: str
+    message: str

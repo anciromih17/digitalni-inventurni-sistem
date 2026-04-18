@@ -11,6 +11,7 @@ class Reservation(Base):
     start_date = Column(String, nullable=False)
     end_date = Column(String, nullable=False)
     quantity = Column(Integer, nullable=False)
+    returned_quantity = Column(Integer, nullable=False, default=0)
     status = Column(String, default="PENDING")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)

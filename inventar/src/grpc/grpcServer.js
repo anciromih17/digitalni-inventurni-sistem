@@ -83,12 +83,61 @@ async function reserveItem(call, callback) {
     }
 }
 
+async function returnItem(call, callback) {
+    try {
+        const { item_id, quantity } = call.request;
+
+        console.log("[gRPC] ReturnItem called for item:", item_id, "quantity:", quantity);
+
+        const item = await itemRepository.getItemById(item_id);
+
+        if (!item) {
+            return callback(null, {
+                success: false,
+                message: "Item not found",
+            });
+        }
+
+        if (quantity <= 0) {
+            return callback(null, {
+                success: false,
+                message: "Return quantity must be greater than 0",
+            });
+        }
+
+        if ((item.available_quantity + quantity) > item.quantity) {
+            return callback(null, {
+                success: false,
+                message: "Return quantity exceeds total inventory quantity",
+            });
+        }
+
+        const updatedItem = await itemRepository.returnItemQuantity(item_id, quantity);
+
+        if (!updatedItem) {
+            return callback(null, {
+                success: false,
+                message: "Return failed",
+            });
+        }
+
+        return callback(null, {
+            success: true,
+            message: "Item returned successfully",
+        });
+    } catch (error) {
+        console.error("[gRPC ReturnItem ERROR]", error.message);
+        callback(error);
+    }
+}
+
 function startGrpcServer() {
     const server = new grpc.Server();
 
     server.addService(inventoryProto.InventoryGrpcService.service, {
         GetItemAvailability: getItemAvailability,
         ReserveItem: reserveItem,
+        ReturnItem: returnItem,
     });
 
     const address = "0.0.0.0:50051";

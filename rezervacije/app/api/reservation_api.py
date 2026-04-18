@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.schemas.reservation_schema import ReservationCreate, ReservationUpdate, ReservationResponse
+from app.schemas.reservation_schema import ReservationCreate, ReservationUpdate, ReservationResponse, ReservationReturnRequest, ReservationReturnResponse
 from app.services import reservation_service
 
 router = APIRouter(prefix="/api/reservations", tags=["Reservations"])
@@ -60,3 +60,19 @@ def search_reservations(status: str = None, reserved_by: str = None, db: Session
     results = reservation_service.search_reservations(db, status, reserved_by)
     print(f"[SEARCH RESERVATIONS] Found {len(results)} results")
     return results
+
+@router.post("/{reservation_id}/return", response_model=ReservationReturnResponse)
+def return_reservation_items(
+    reservation_id: int,
+    payload: ReservationReturnRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        print(f"[RETURN RESERVATION] Request received for ID={reservation_id}, quantity={payload.quantity}")
+        result = reservation_service.return_reservation_items(db, reservation_id, payload.quantity)
+        print(f"[RETURN RESERVATION] Reservation updated ID={reservation_id}, status={result['status']}")
+        return result
+    except ValueError as e:
+        print(f"[RETURN RESERVATION ERROR] {str(e)}")
+        status_code = 404 if str(e) == "Reservation not found" else 400
+        raise HTTPException(status_code=status_code, detail=str(e))

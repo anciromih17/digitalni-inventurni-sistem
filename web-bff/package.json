@@ -1,0 +1,12 @@
+{
+  "name": "web-bff",
+  "version": "1.0.0",
+  "description": "Backend for frontend gateway for the web client",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
