@@ -43,3 +43,9 @@ reservations_postgres_data/
 # gRPC generated files
 *_pb2.py
 *_pb2_grpc.py
+
+#dist
+web-ui/dist/
+inventory-ui/dist/
+reservations-ui/dist/
+users-ui/dist/

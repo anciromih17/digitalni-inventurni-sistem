@@ -1,9 +1,17 @@
 const express = require("express");
+const cors = require("cors");
 const config = require("./config");
 const { requestJson } = require("./http");
 
 const app = express();
 
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 app.use(express.json());
 
 function sanitizeUser(user) {
@@ -19,12 +27,15 @@ function mapItemForWeb(item) {
   return {
     id: item.id,
     name: item.name,
+    description: item.description,
     category: item.category,
+    subcategory: item.subcategory,
+    item_type: item.item_type,
     location: item.location,
     status: item.status,
     quantity: item.quantity,
     availableQuantity: item.available_quantity,
-    description: item.description,
+    available_quantity: item.available_quantity,
   };
 }
 

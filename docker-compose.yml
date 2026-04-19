@@ -130,6 +130,41 @@ services:
       RESERVATIONS_SERVICE_URL: http://reservations-service:8001
       USERS_SERVICE_URL: http://users-service:8002
 
+  web-ui:
+    build: ./web-ui
+    container_name: web-ui
+    depends_on:
+      - inventory-ui
+      - reservations-ui
+      - users-ui
+      - web-bff
+    ports:
+      - "3000:80"
+
+  inventory-ui:
+    build: ./inventory-ui
+    container_name: inventory-ui
+    depends_on:
+      - web-bff
+    ports:
+      - "3001:80"
+
+  reservations-ui:
+    build: ./reservations-ui
+    container_name: reservations-ui
+    depends_on:
+      - web-bff
+    ports:
+      - "3002:80"
+
+  users-ui:
+    build: ./users-ui
+    container_name: users-ui
+    depends_on:
+      - web-bff
+    ports:
+      - "3003:80"
+
 volumes:
   inventory_db_data:
   reservations_db_data:

@@ -85,6 +85,10 @@ Namen inventurnega sistema je poenostavitev procesa popisa inventure, izboljšan
 | Inventar    | 8000  |
 | Rezervacije | 8001  |
 | Uporabniki  | 8002  |
+| Web UI Shell | 3000 |
+| Inventory UI | 3001 |
+| Reservations UI | 3002 |
+| Users UI | 3003 |
 | ActiveMQ    | 8161  |
 | MongoDB     | 27017 |
 | PostgreSQL  | 5432  |
@@ -293,3 +297,126 @@ Vračilo vse preostale opreme:
 ```json
 {}
 ```
+
+## Naloga 6 - Micro Frontends
+
+Za spletni odjemalec je arhitektura razdeljena na štiri ločene frontend komponente:
+
+- `web-ui` - shell oziroma host aplikacija
+- `inventory-ui` - micro frontend za inventar
+- `reservations-ui` - micro frontend za rezervacije in vračanje opreme
+- `users-ui` - micro frontend za uporabnike
+
+Arhitekturni slog:
+
+- `Webpack Module Federation`
+- shell na `http://localhost:3000`
+- remote moduli na `http://localhost:3001`, `3002`, `3003`
+
+### Kaj omogoča spletni vmesnik
+
+`inventory-ui`
+
+- pregled vse opreme
+- iskanje po kategoriji, statusu in lokaciji
+- pregled podrobnosti
+- pregled availability
+- ustvarjanje nove opreme
+- posodabljanje opreme
+- brisanje opreme
+
+`reservations-ui`
+
+- pregled vseh rezervacij
+- iskanje rezervacij
+- pregled rezervacije po ID
+- ustvarjanje rezervacije
+- posodabljanje rezervacije
+- brisanje rezervacije
+- vračilo po kosih
+- vračilo vsega preostalega
+
+`users-ui`
+
+- registracija
+- prijava
+- pregled vseh uporabnikov
+- pregled uporabnika po ID
+- sprememba vloge
+- brisanje uporabnika
+
+### Step-by-step zagon celotnega sistema
+
+1. Zaženi vse storitve in micro frontende:
+
+```bash
+docker compose up --build
+```
+
+2. Odpri shell aplikacijo:
+
+```text
+http://localhost:3000
+```
+
+3. Shell bo naložil tri remote module:
+
+- Inventar
+- Rezervacije
+- Uporabniki
+
+4. V zavihku `Inventar` preizkusi:
+
+- create item
+- get items
+- search items
+- get item detail
+- get item availability
+- update item
+- delete item
+
+5. V zavihku `Rezervacije` preizkusi:
+
+- create reservation
+- list reservations
+- search reservations
+- get reservation detail
+- update reservation
+- return partial quantity
+- return all remaining quantity
+- delete reservation
+
+6. V zavihku `Uporabniki` preizkusi:
+
+- register
+- login
+- list users
+- get user by id
+- update role
+- delete user
+
+### GitHub Actions in DockerHub
+
+Dodana sta dva nova workflowa:
+
+- `.github/workflows/microfrontends-ci.yml`
+  - zgradi vse štiri frontend aplikacije
+- `.github/workflows/docker-publish.yml`
+  - zgradi in objavi Docker slike vseh komponent na DockerHub
+
+Predpogoj za objavo na DockerHub:
+
+- v GitHub repozitoriju nastavi `DOCKERHUB_USERNAME`
+- v GitHub repozitoriju nastavi `DOCKERHUB_TOKEN`
+
+Workflow `docker-publish.yml` objavlja slike za:
+
+- `inventory-service`
+- `reservations-service`
+- `users-service`
+- `web-bff`
+- `mobile-bff`
+- `web-ui-shell`
+- `inventory-ui`
+- `reservations-ui`
+- `users-ui`
