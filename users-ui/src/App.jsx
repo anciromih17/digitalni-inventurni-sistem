@@ -104,7 +104,6 @@ export default function App() {
       <header className="domain-header">
         <div>
           <h2>Uporabniki Micro Frontend</h2>
-          <p>Prek `web-bff` testiraš registracijo, prijavo, seznam uporabnikov, podrobnosti, menjavo vlog in brisanje.</p>
         </div>
         <button type="button" className="ghost-button" onClick={() => loadUsers().catch((error) => setFeedback(error.message))}>
           Osveži seznam

@@ -138,7 +138,6 @@ export default function App() {
       <header className="domain-header">
         <div>
           <h2>Rezervacije Micro Frontend</h2>
-          <p>Prek `web-bff` testiraš rezervacije, iskanje, posodabljanje, brisanje ter delno ali popolno vračanje opreme.</p>
         </div>
         <button type="button" className="ghost-button" onClick={() => loadReservations().catch((error) => setFeedback(error.message))}>
           Osveži seznam

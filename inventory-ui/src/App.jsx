@@ -138,7 +138,6 @@ export default function App() {
       <header className="domain-header">
         <div>
           <h2>Inventar Micro Frontend</h2>
-          <p>Prek `web-bff` testiraš iskanje, ustvarjanje, pregled, posodobitev, brisanje in razpoložljivost opreme.</p>
         </div>
         <button type="button" className="ghost-button" onClick={() => loadItems().catch((error) => setFeedback(error.message))}>
           Osveži seznam
