@@ -9,54 +9,196 @@ const InventoryApp = React.lazy(() => import("inventory/App"));
 const ReservationsApp = React.lazy(() => import("reservations/App"));
 const UsersApp = React.lazy(() => import("users/App"));
 
+const API_BASE = "http://localhost:8010";
+
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: dashboardIcon, component: null },
   { id: "inventory", label: "Inventar", icon: inventoryIcon, component: InventoryApp },
   { id: "reservations", label: "Rezervacije", icon: reservationsIcon, component: ReservationsApp },
 ];
 
-function StatusCard({ title, url }) {
-  const [state, setState] = useState({ loading: true, ok: false, message: "" });
+async function request(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
 
-  useEffect(() => {
-    let active = true;
+  if (response.status === 204) {
+    return null;
+  }
 
-    fetch(url)
-      .then(async (response) => {
-        const data = await response.json();
-        if (!active) {
-          return;
-        }
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
 
-        setState({
-          loading: false,
-          ok: response.ok,
-          message: JSON.stringify(data),
-        });
-      })
-      .catch((error) => {
-        if (!active) {
-          return;
-        }
+  if (!response.ok) {
+    throw new Error(data?.error || data?.message || data?.upstream?.detail || "Request failed");
+  }
 
-        setState({
-          loading: false,
-          ok: false,
-          message: error.message,
-        });
+  return data;
+}
+
+function AuthScreen({ mode, onModeChange, onAuthenticated }) {
+  const [loginUsername, setLoginUsername] = useState("");
+  const [registerForm, setRegisterForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+  });
+  const [feedback, setFeedback] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    setLoading(true);
+    setFeedback("");
+
+    try {
+      const result = await request("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username: loginUsername }),
       });
 
-    return () => {
-      active = false;
-    };
-  }, [url]);
+      onAuthenticated(result.user);
+    } catch (error) {
+      setFeedback(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegister(event) {
+    event.preventDefault();
+    setLoading(true);
+    setFeedback("");
+
+    try {
+      const user = await request("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ ...registerForm, role: "USER" }),
+      });
+
+      setLoginUsername(user.username);
+      setRegisterForm({ username: "", email: "", password: "" });
+      setFeedback(`Uporabnik ${user.username} je bil uspešno ustvarjen. Nadaljuj s prijavo.`);
+      onModeChange("login");
+    } catch (error) {
+      setFeedback(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div className={`status-card ${state.ok ? "ok" : "fail"}`}>
-      <div className="status-label">{title}</div>
-      <div className="status-value">{state.loading ? "Preverjam ..." : state.ok ? "OK" : "Napaka"}</div>
-      <code>{state.message}</code>
-    </div>
+    <section className="auth-shell">
+      <div className="auth-card">
+        <div className="auth-copy">
+          <img src={logo} alt="Logo" className="auth-logo" />
+          <span className="auth-eyebrow">Digitalni inventurni sistem</span>
+          <h1>Vstop v aplikacijo</h1>
+          <p>
+            Prijava in registracija sta zdaj ločeni od administrativnega modula za uporabnike.
+            Po prijavi dostopaš do dashboarda, inventarja, rezervacij in uporabnikov.
+          </p>
+          <div className="auth-points">
+            <div>Micro frontend shell z ločenimi domenskimi moduli</div>
+            <div>Dostop do zaledja izključno prek `web-bff`</div>
+            <div>Inventory, reservations in users funkcionalnosti na enem mestu</div>
+          </div>
+        </div>
+
+        <div className="auth-panel">
+          <div className="auth-tabs">
+            <button
+              type="button"
+              className={mode === "login" ? "auth-tab active" : "auth-tab"}
+              onClick={() => onModeChange("login")}
+            >
+              Login
+            </button>
+            <button
+              type="button"
+              className={mode === "register" ? "auth-tab active" : "auth-tab"}
+              onClick={() => onModeChange("register")}
+            >
+              Register
+            </button>
+          </div>
+
+          <div className="auth-panel-body">
+            {mode === "login" ? (
+              <form className="auth-form" onSubmit={handleLogin}>
+                <div className="auth-heading">
+                  <h2>Prijava</h2>
+                  <p>Prijavi se z uporabniškim imenom, ki obstaja v users servisu.</p>
+                </div>
+
+                <label>
+                  Username
+                  <input
+                    required
+                    value={loginUsername}
+                    onChange={(event) => setLoginUsername(event.target.value)}
+                    placeholder="npr. ana"
+                  />
+                </label>
+
+                <button type="submit" className="auth-submit" disabled={loading}>
+                  {loading ? "Prijavljam ..." : "Prijava"}
+                </button>
+              </form>
+            ) : (
+              <form className="auth-form" onSubmit={handleRegister}>
+                <div className="auth-heading">
+                  <h2>Registracija</h2>
+                  <p>Ustvari nov uporabniški račun. Privzeta vloga novega računa je `USER`.</p>
+                </div>
+
+                <label>
+                  Username
+                  <input
+                    required
+                    value={registerForm.username}
+                    onChange={(event) => setRegisterForm({ ...registerForm, username: event.target.value })}
+                    placeholder="npr. ana"
+                  />
+                </label>
+
+                <label>
+                  Email
+                  <input
+                    required
+                    type="email"
+                    value={registerForm.email}
+                    onChange={(event) => setRegisterForm({ ...registerForm, email: event.target.value })}
+                    placeholder="ana@test.si"
+                  />
+                </label>
+
+                <label>
+                  Password
+                  <input
+                    required
+                    type="password"
+                    value={registerForm.password}
+                    onChange={(event) => setRegisterForm({ ...registerForm, password: event.target.value })}
+                    placeholder="••••••••"
+                  />
+                </label>
+
+                <button type="submit" className="auth-submit" disabled={loading}>
+                  {loading ? "Ustvarjam račun ..." : "Ustvari račun"}
+                </button>
+              </form>
+            )}
+
+            {feedback ? <div className="auth-feedback">{feedback}</div> : null}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -67,18 +209,11 @@ function Dashboard() {
   useEffect(() => {
     let active = true;
 
-    fetch("http://localhost:8010/api/dashboard")
-      .then(async (response) => {
-        const payload = await response.json();
-        if (!active) {
-          return;
+    request("/api/dashboard")
+      .then((payload) => {
+        if (active) {
+          setData(payload);
         }
-
-        if (!response.ok) {
-          throw new Error(payload?.error || "Dashboard request failed");
-        }
-
-        setData(payload);
       })
       .catch((err) => {
         if (active) {
@@ -140,7 +275,7 @@ function Dashboard() {
             <span>{latestReservation ? `Item #${latestReservation.item_id}, ${latestReservation.start_date}` : "Ni prihajajočih rezervacij."}</span>
           </div>
           <div className="schedule-box">
-            <strong>System Status</strong>
+            <strong>System Overview</strong>
             <span>{error || "Vsi moduli so pripravljeni za delo."}</span>
           </div>
         </div>
@@ -150,7 +285,25 @@ function Dashboard() {
 }
 
 export default function App() {
+  const [authMode, setAuthMode] = useState("login");
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  if (!currentUser) {
+    return (
+      <div className="shell">
+        <AuthScreen
+          mode={authMode}
+          onModeChange={setAuthMode}
+          onAuthenticated={(user) => {
+            setCurrentUser(user);
+            setActiveTab("dashboard");
+          }}
+        />
+      </div>
+    );
+  }
+
   const active = activeTab === "users"
     ? { id: "users", label: "Uporabniki", component: UsersApp }
     : tabs.find((tab) => tab.id === activeTab) || tabs[0];
@@ -181,23 +334,34 @@ export default function App() {
         <main className="content-frame">
           <header className="content-header">
             <div>
+              <span className="user-kicker">Prijavljen uporabnik</span>
               <h1>{active.label}</h1>
             </div>
             <div className="top-actions">
+              <div className="session-chip">
+                <strong>{currentUser.username}</strong>
+                <span>{currentUser.role}</span>
+              </div>
               <button type="button" className="round-action user-action" title="Uporabniki" onClick={() => setActiveTab("users")}>
                 <img src={userIcon} alt="Uporabniki" />
               </button>
+              <button
+                type="button"
+                className="session-button"
+                onClick={() => {
+                  setCurrentUser(null);
+                  setAuthMode("login");
+                }}
+              >
+                Odjava
+              </button>
             </div>
           </header>
-          <div className="status-strip">
-            <StatusCard title="Web BFF" url="http://localhost:8010/health" />
-            <StatusCard title="Mobile BFF" url="http://localhost:8011/health" />
-          </div>
           {activeTab === "dashboard" ? (
             <Dashboard />
           ) : (
             <Suspense fallback={<div className="loading-panel">Nalagam modul {active.label} ...</div>}>
-              <ActiveComponent />
+              <ActiveComponent currentUser={currentUser} />
             </Suspense>
           )}
         </main>

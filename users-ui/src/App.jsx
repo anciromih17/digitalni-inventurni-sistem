@@ -3,13 +3,6 @@ import "./styles.css";
 
 const API_BASE = "http://localhost:8010";
 
-const emptyRegistration = {
-  username: "",
-  email: "",
-  password: "",
-  role: "USER",
-};
-
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -33,39 +26,16 @@ async function request(path, options = {}) {
   return data;
 }
 
-export default function App() {
+export default function App({ currentUser }) {
   const [users, setUsers] = useState([]);
-  const [registration, setRegistration] = useState(emptyRegistration);
-  const [loginUsername, setLoginUsername] = useState("");
   const [userLookupId, setUserLookupId] = useState("");
   const [roleForm, setRoleForm] = useState({ userId: "", role: "USER" });
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(currentUser || null);
   const [feedback, setFeedback] = useState("Modul uporabnikov je pripravljen.");
 
   async function loadUsers() {
     const data = await request("/api/users");
     setUsers(data);
-  }
-
-  async function registerUser(event) {
-    event.preventDefault();
-    const user = await request("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify(registration),
-    });
-    setFeedback(`Uporabnik ${user.username} je bil registriran.`);
-    setRegistration(emptyRegistration);
-    await loadUsers();
-  }
-
-  async function loginUser(event) {
-    event.preventDefault();
-    const result = await request("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username: loginUsername }),
-    });
-    setSelected(result.user);
-    setFeedback(`Prijava uspešna za ${result.user.username}.`);
   }
 
   async function loadUserById(id) {
@@ -99,6 +69,14 @@ export default function App() {
     loadUsers().catch((error) => setFeedback(error.message));
   }, []);
 
+  useEffect(() => {
+    if (currentUser) {
+      setSelected(currentUser);
+      setRoleForm({ userId: currentUser.id || "", role: currentUser.role || "USER" });
+      setUserLookupId(currentUser.id || "");
+    }
+  }, [currentUser]);
+
   return (
     <section className="domain">
       <header className="domain-header">
@@ -114,48 +92,8 @@ export default function App() {
 
       <div className="domain-grid">
         <article className="panel">
-          <h3>Registracija</h3>
-          <form className="form-grid" onSubmit={registerUser}>
-            <label>
-              Username
-              <input required value={registration.username} onChange={(event) => setRegistration({ ...registration, username: event.target.value })} />
-            </label>
-            <label>
-              Email
-              <input required value={registration.email} onChange={(event) => setRegistration({ ...registration, email: event.target.value })} />
-            </label>
-            <label>
-              Password
-              <input required type="password" value={registration.password} onChange={(event) => setRegistration({ ...registration, password: event.target.value })} />
-            </label>
-            <label>
-              Vloga
-              <select value={registration.role} onChange={(event) => setRegistration({ ...registration, role: event.target.value })}>
-                <option value="USER">USER</option>
-                <option value="ADMIN">ADMIN</option>
-              </select>
-            </label>
-            <div className="button-row">
-              <button type="submit">Registriraj</button>
-              <button type="button" className="ghost-button" onClick={() => setRegistration(emptyRegistration)}>
-                Ponastavi
-              </button>
-            </div>
-          </form>
-        </article>
-
-        <article className="panel">
-          <h3>Prijava in podrobnosti</h3>
-          <form className="form-grid compact" onSubmit={loginUser}>
-            <label>
-              Username za login
-              <input value={loginUsername} onChange={(event) => setLoginUsername(event.target.value)} />
-            </label>
-            <div className="button-row">
-              <button type="submit">Prijavi</button>
-            </div>
-          </form>
-          <div className="form-grid compact lookup">
+          <h3>Moj profil in pregled</h3>
+          <div className="form-grid compact">
             <label>
               User ID
               <input value={userLookupId} onChange={(event) => setUserLookupId(event.target.value)} />
@@ -166,10 +104,11 @@ export default function App() {
               </button>
             </div>
           </div>
+          <div className="lookup">
+            <pre>{JSON.stringify(currentUser, null, 2)}</pre>
+          </div>
         </article>
-      </div>
 
-      <div className="domain-grid">
         <article className="panel">
           <h3>Spremeni vlogo</h3>
           <form className="form-grid compact" onSubmit={updateRole}>
@@ -189,57 +128,59 @@ export default function App() {
             </div>
           </form>
         </article>
+      </div>
 
+      <div className="domain-grid">
         <article className="panel">
           <h3>Izbran uporabnik</h3>
           <pre>{JSON.stringify(selected, null, 2)}</pre>
         </article>
-      </div>
 
-      <article className="panel">
-        <h3>Seznam uporabnikov</h3>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Akcije</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
-                  <td>{user.username}</td>
-                  <td>{user.email}</td>
-                  <td>{user.role}</td>
-                  <td className="actions">
-                    <button type="button" onClick={() => loadUserById(user.id).catch((error) => setFeedback(error.message))}>
-                      Detajli
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost-button"
-                      onClick={() => {
-                        setRoleForm({ userId: user.id, role: user.role || "USER" });
-                        setSelected(user);
-                      }}
-                    >
-                      Uredi vlogo
-                    </button>
-                    <button type="button" className="danger-button" onClick={() => deleteUser(user.id).catch((error) => setFeedback(error.message))}>
-                      Izbriši
-                    </button>
-                  </td>
+        <article className="panel">
+          <h3>Seznam uporabnikov</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Akcije</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </article>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.id}</td>
+                    <td>{user.username}</td>
+                    <td>{user.email}</td>
+                    <td>{user.role}</td>
+                    <td className="actions">
+                      <button type="button" onClick={() => loadUserById(user.id).catch((error) => setFeedback(error.message))}>
+                        Detajli
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={() => {
+                          setRoleForm({ userId: user.id, role: user.role || "USER" });
+                          setSelected(user);
+                        }}
+                      >
+                        Uredi vlogo
+                      </button>
+                      <button type="button" className="danger-button" onClick={() => deleteUser(user.id).catch((error) => setFeedback(error.message))}>
+                        Izbriši
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
     </section>
   );
 }
