@@ -16,10 +16,11 @@ const emptyForm = {
   status: "AVAILABLE",
 };
 
-async function request(path, options = {}) {
+async function request(path, token, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
     ...options,
@@ -39,7 +40,8 @@ async function request(path, options = {}) {
   return data;
 }
 
-export default function App() {
+export default function App({ currentUser, authToken }) {
+  const isAdmin = currentUser?.role === "ADMIN";
   const [items, setItems] = useState([]);
   const [filters, setFilters] = useState({ category: "", status: "", location: "" });
   const [form, setForm] = useState(emptyForm);
@@ -56,12 +58,12 @@ export default function App() {
     });
 
     const path = params.toString() ? `/api/items/search?${params.toString()}` : "/api/items";
-    const data = await request(path);
+    const data = await request(path, authToken);
     setItems(data);
   }
 
   async function loadItemById(id) {
-    const data = await request(`/api/items/${id}`);
+    const data = await request(`/api/items/${id}`, authToken);
     setSelected(data);
     setAvailability(data.availability || null);
     setForm({
@@ -79,7 +81,7 @@ export default function App() {
   }
 
   async function loadAvailability(id) {
-    const data = await request(`/api/items/${id}/availability`);
+    const data = await request(`/api/items/${id}/availability`, authToken);
     setAvailability(data);
   }
 
@@ -99,13 +101,13 @@ export default function App() {
     };
 
     if (form.id) {
-      await request(`/api/items/${form.id}`, {
+      await request(`/api/items/${form.id}`, authToken, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
       setFeedback(`Oprema #${form.id} je bila posodobljena.`);
     } else {
-      await request("/api/items", {
+      await request("/api/items", authToken, {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -119,7 +121,7 @@ export default function App() {
   }
 
   async function deleteItem(id) {
-    await request(`/api/items/${id}`, { method: "DELETE" });
+    await request(`/api/items/${id}`, authToken, { method: "DELETE" });
     setFeedback(`Oprema #${id} je bila izbrisana.`);
     if (String(form.id) === String(id)) {
       setForm(emptyForm);
@@ -131,19 +133,10 @@ export default function App() {
 
   useEffect(() => {
     loadItems().catch((error) => setFeedback(error.message));
-  }, []);
+  }, [authToken]);
 
   return (
     <section className="domain">
-      <header className="domain-header">
-        <div>
-          <h2>Inventar Micro Frontend</h2>
-        </div>
-        <button type="button" className="ghost-button" onClick={() => loadItems().catch((error) => setFeedback(error.message))}>
-          Osveži seznam
-        </button>
-      </header>
-
       <p className="feedback">{feedback}</p>
 
       <div className="domain-grid">
@@ -190,6 +183,7 @@ export default function App() {
           </div>
         </article>
 
+        {isAdmin ? (
         <article className="panel">
           <h3>{form.id ? `Uredi opremo #${form.id}` : "Dodaj opremo"}</h3>
           <form onSubmit={onSubmit} className="form-grid">
@@ -248,6 +242,12 @@ export default function App() {
             </div>
           </form>
         </article>
+        ) : (
+        <article className="panel">
+          <h3>Urejanje opreme</h3>
+          <p className="feedback">Za dodajanje, posodabljanje in brisanje opreme potrebuješ vlogo ADMIN.</p>
+        </article>
+        )}
       </div>
 
       <div className="domain-grid">
@@ -280,9 +280,11 @@ export default function App() {
                       <button type="button" className="ghost-button" onClick={() => loadAvailability(item.id).catch((error) => setFeedback(error.message))}>
                         Availability
                       </button>
-                      <button type="button" className="danger-button" onClick={() => deleteItem(item.id).catch((error) => setFeedback(error.message))}>
-                        Izbriši
-                      </button>
+                      {isAdmin ? (
+                        <button type="button" className="danger-button" onClick={() => deleteItem(item.id).catch((error) => setFeedback(error.message))}>
+                          Izbriši
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

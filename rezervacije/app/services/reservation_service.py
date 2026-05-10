@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.repositories import reservation_repository
 from app.grpc.grpc_client import get_item_availability, reserve_item, return_item
 from app.mq.mq_producer import producer
+from app.services import audit_service
 
 def create_reservation(db: Session, reservation):
     print(f"[CREATE RESERVATION] Request for item_id={reservation.item_id}, quantity={reservation.quantity}")
@@ -25,6 +26,18 @@ def create_reservation(db: Session, reservation):
 
     saved_reservation = reservation_repository.create_reservation(db, reservation)
 
+    audit_service.log_reservation_audit(
+        db,
+        "RESERVATION_CREATED",
+        saved_reservation.id,
+        saved_reservation.reserved_by,
+        {
+            "item_id": saved_reservation.item_id,
+            "quantity": saved_reservation.quantity,
+            "status": saved_reservation.status,
+        },
+    )
+
     try:
         producer.send_event({
             "eventType": "RESERVATION_CREATED",
@@ -45,10 +58,41 @@ def get_reservation_by_id(db: Session, reservation_id: int):
     return reservation_repository.get_reservation_by_id(db, reservation_id)
 
 def update_reservation(db: Session, reservation_id: int, reservation):
-    return reservation_repository.update_reservation(db, reservation_id, reservation)
+    existing = reservation_repository.get_reservation_by_id(db, reservation_id)
+    updated = reservation_repository.update_reservation(db, reservation_id, reservation)
+
+    if updated:
+        audit_service.log_reservation_audit(
+            db,
+            "RESERVATION_UPDATED",
+            updated.id,
+            updated.reserved_by,
+            {
+                "previous_status": existing.status if existing else None,
+                "new_status": updated.status,
+                "quantity": updated.quantity,
+            },
+        )
+
+    return updated
 
 def delete_reservation(db: Session, reservation_id: int):
-    return reservation_repository.delete_reservation(db, reservation_id)
+    reservation = reservation_repository.get_reservation_by_id(db, reservation_id)
+    deleted = reservation_repository.delete_reservation(db, reservation_id)
+
+    if deleted and reservation:
+        audit_service.log_reservation_audit(
+            db,
+            "RESERVATION_DELETED",
+            reservation.id,
+            reservation.reserved_by,
+            {
+                "item_id": reservation.item_id,
+                "quantity": reservation.quantity,
+            },
+        )
+
+    return deleted
 
 def search_reservations(db: Session, status=None, reserved_by=None):
     return reservation_repository.search_reservations(db, status, reserved_by)
@@ -95,6 +139,19 @@ def return_reservation_items(db: Session, reservation_id: int, quantity: int | N
     except Exception as e:
         print("[ActiveMQ ERROR] Failed to send return event:", str(e))
 
+    audit_service.log_reservation_audit(
+        db,
+        "RESERVATION_RETURNED",
+        updated_reservation.id,
+        updated_reservation.reserved_by,
+        {
+            "item_id": updated_reservation.item_id,
+            "returned_quantity": return_quantity,
+            "total_returned_quantity": updated_reservation.returned_quantity,
+            "status": updated_reservation.status,
+        },
+    )
+
     return {
         "reservation_id": updated_reservation.id,
         "item_id": updated_reservation.item_id,
@@ -104,3 +161,7 @@ def return_reservation_items(db: Session, reservation_id: int, quantity: int | N
         "status": updated_reservation.status,
         "message": "Equipment returned successfully",
     }
+
+
+def get_audit_logs(db: Session, action: str | None = None, limit: int = 50):
+    return audit_service.get_audit_logs(db, action=action, limit=limit)

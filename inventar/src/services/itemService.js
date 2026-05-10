@@ -1,4 +1,5 @@
 const itemRepository = require("../repositories/itemRepository");
+const auditService = require("./auditService");
 
 function determineStatus(quantity, availableQuantity) {
     if (quantity === 0 || availableQuantity === 0) {
@@ -41,7 +42,16 @@ async function createItem(data) {
         status: data.status || determineStatus(data.quantity, data.available_quantity),
     };
 
-    return await itemRepository.createItem(item);
+    const createdItem = await itemRepository.createItem(item);
+
+    await auditService.logInventoryAudit("ITEM_CREATED", createdItem, {
+        name: createdItem.name,
+        category: createdItem.category,
+        quantity: createdItem.quantity,
+        available_quantity: createdItem.available_quantity,
+    });
+
+    return createdItem;
 }
 
 async function getAllItems() {
@@ -93,7 +103,24 @@ async function updateItem(id, data) {
         status: data.status || determineStatus(data.quantity, data.available_quantity),
     };
 
-    return await itemRepository.updateItem(id, updatedData);
+    const updatedItem = await itemRepository.updateItem(id, updatedData);
+
+    await auditService.logInventoryAudit("ITEM_UPDATED", updatedItem, {
+        previous: {
+            name: existing.name,
+            quantity: existing.quantity,
+            available_quantity: existing.available_quantity,
+            status: existing.status,
+        },
+        current: {
+            name: updatedItem.name,
+            quantity: updatedItem.quantity,
+            available_quantity: updatedItem.available_quantity,
+            status: updatedItem.status,
+        },
+    });
+
+    return updatedItem;
 }
 
 async function deleteItem(id) {
@@ -102,6 +129,13 @@ async function deleteItem(id) {
     if (!deleted) {
         throw new Error("Item not found");
     }
+
+    await auditService.logInventoryAudit("ITEM_DELETED", deleted, {
+        name: deleted.name,
+        quantity: deleted.quantity,
+        available_quantity: deleted.available_quantity,
+        location: deleted.location,
+    });
 
     return deleted;
 }

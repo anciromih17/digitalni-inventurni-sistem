@@ -76,3 +76,10 @@ def return_reservation_items(
         print(f"[RETURN RESERVATION ERROR] {str(e)}")
         status_code = 404 if str(e) == "Reservation not found" else 400
         raise HTTPException(status_code=status_code, detail=str(e))
+
+
+@router.get("/audit/logs")
+def get_audit_logs(action: str = None, limit: int = 50, db: Session = Depends(get_db)):
+    print(f"[GET RESERVATION AUDIT LOGS] action={action}, limit={limit}")
+    logs = reservation_service.get_audit_logs(db, action=action, limit=limit)
+    return logs

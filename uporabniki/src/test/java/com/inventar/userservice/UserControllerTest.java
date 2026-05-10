@@ -53,14 +53,12 @@ public class UserControllerTest {
         user.setPassword("123");
         user.setRole(Role.USER);
 
-        Mockito.when(userService.login("testuser"))
+        Mockito.when(userService.login("testuser", "123"))
                 .thenReturn(Mono.just(user));
 
         webTestClient.post()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/users/login")
-                        .queryParam("username", "testuser")
-                        .build())
+                .uri("/api/users/login")
+                .bodyValue(java.util.Map.of("username", "testuser", "password", "123"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
