@@ -31,13 +31,18 @@
 }
 
 .domain-header h2,
-.panel h3 {
+.panel h3,
+.panel h4 {
   margin: 0 0 8px;
   color: #171c1b;
 }
 
 .panel h3 {
   font-size: 1.12rem;
+}
+
+.panel h4 {
+  font-size: 1rem;
 }
 
 .domain-header p,
@@ -51,6 +56,13 @@
   border-radius: 14px;
   background: #f4f6f5;
   border: 1px solid #dde3e0;
+}
+
+.feedback.subtle {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #60706b;
 }
 
 .domain-grid {
@@ -67,6 +79,14 @@
   box-shadow: 0 10px 24px rgba(18, 24, 22, 0.04);
 }
 
+.panel-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -75,6 +95,10 @@
 
 .form-grid.compact {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.reservation-bundle-form {
+  align-items: end;
 }
 
 .domain label {
@@ -143,6 +167,176 @@
   color: #ffffff;
 }
 
+.bundle-summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f7f8f7;
+  border: 1px solid #e1e6e3;
+  color: #41504b;
+}
+
+.bundle-summary strong {
+  color: #1b2220;
+}
+
+.reservation-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.reservation-group {
+  display: grid;
+  gap: 12px;
+}
+
+.reservation-group-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.reservation-group-head span {
+  color: #67736f;
+  font-size: 0.82rem;
+}
+
+.reservation-item-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reservation-item-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid #dde3e0;
+  background: #fbfcfb;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.reservation-item-card.selected {
+  border-color: #98a7a2;
+  box-shadow: 0 10px 18px rgba(18, 24, 22, 0.08);
+  transform: translateY(-1px);
+}
+
+.reservation-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reservation-item-top > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.domain .reservation-item-toggle {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d7dfdb;
+  border-radius: 999px;
+  background: #27302e;
+  color: #f4f7f6;
+  text-align: left;
+  min-height: auto;
+  max-height: none;
+  height: auto;
+  display: block;
+  box-shadow: none;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.reservation-item-top strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.reservation-item-top span {
+  display: block;
+  margin-top: 4px;
+  color: #9da8a4;
+  font-size: 0.82rem;
+}
+
+.item-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #4b5854;
+}
+
+.reservation-item-summary {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  color: #afbbb7;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.reservation-caret {
+  transition: transform 0.18s ease;
+}
+
+.reservation-caret.open {
+  transform: rotate(180deg);
+}
+
+.item-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+.reservation-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reservation-item-meta span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #f1f4f2;
+  color: #55625d;
+  font-size: 0.78rem;
+}
+
+.reservation-item-actions {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.reservation-item-actions input {
+  text-align: center;
+}
+
+.reservation-item-control-row {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+}
+
+.domain .reservation-item-toggle:hover {
+  transform: none;
+  background: #2b3532;
+}
+
+.domain .reservation-item-toggle:focus-visible {
+  outline: 2px solid #8f9c97;
+  outline-offset: 2px;
+}
+
 .domain .table-wrap {
   overflow-x: auto;
 }
@@ -181,11 +375,13 @@
 @media (max-width: 960px) {
   .domain .domain-grid,
   .domain .form-grid,
-  .domain .form-grid.compact {
+  .domain .form-grid.compact,
+  .reservation-item-grid {
     grid-template-columns: 1fr;
   }
 
-  .domain .domain-header {
+  .domain .domain-header,
+  .panel-heading-row {
     flex-direction: column;
   }
 }

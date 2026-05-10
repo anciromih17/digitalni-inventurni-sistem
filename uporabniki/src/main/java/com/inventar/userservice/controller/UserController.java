@@ -1,8 +1,10 @@
 package com.inventar.userservice.controller;
 
 import com.inventar.userservice.model.Role;
+import com.inventar.userservice.model.AuditLog;
 import com.inventar.userservice.model.User;
 import com.inventar.userservice.service.UserService;
+import java.util.Map;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -23,8 +25,18 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public Mono<User> login(@RequestParam String username) {
-        return userService.login(username);
+    public Mono<User> login(
+            @RequestBody(required = false) Map<String, String> payload,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String password) {
+        String effectiveUsername = payload != null && payload.get("username") != null
+                ? payload.get("username")
+                : username;
+        String effectivePassword = payload != null && payload.get("password") != null
+                ? payload.get("password")
+                : password;
+
+        return userService.login(effectiveUsername, effectivePassword);
     }
 
     @GetMapping
@@ -45,5 +57,10 @@ public class UserController {
     @DeleteMapping("/{id}")
     public Mono<Void> deleteUser(@PathVariable String id) {
         return userService.deleteUser(id);
+    }
+
+    @GetMapping("/audit/logs")
+    public Flux<AuditLog> getAuditLogs(@RequestParam(required = false) String action) {
+        return userService.getAuditLogs(action);
     }
 }

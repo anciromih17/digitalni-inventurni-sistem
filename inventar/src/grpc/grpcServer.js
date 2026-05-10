@@ -2,6 +2,7 @@ const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
 const path = require("path");
 const itemRepository = require("../repositories/itemRepository");
+const auditService = require("../services/auditService");
 
 const PROTO_PATH = path.join(__dirname, "inventory.proto");
 
@@ -73,6 +74,13 @@ async function reserveItem(call, callback) {
             });
         }
 
+        await auditService.logInventoryAudit("ITEM_RESERVED", updatedItem, {
+            item_id,
+            reserved_quantity: quantity,
+            available_quantity_after: updatedItem.available_quantity,
+            status: updatedItem.status,
+        }, "reservations-service");
+
         return callback(null, {
             success: true,
             message: "Item reserved successfully",
@@ -120,6 +128,13 @@ async function returnItem(call, callback) {
                 message: "Return failed",
             });
         }
+
+        await auditService.logInventoryAudit("ITEM_RETURNED", updatedItem, {
+            item_id,
+            returned_quantity: quantity,
+            available_quantity_after: updatedItem.available_quantity,
+            status: updatedItem.status,
+        }, "reservations-service");
 
         return callback(null, {
             success: true,

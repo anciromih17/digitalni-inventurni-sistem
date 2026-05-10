@@ -1,7 +1,7 @@
 const pool = require("./db");
 
 async function initDb() {
-    const query = `
+    const itemsQuery = `
     CREATE TABLE IF NOT EXISTS items (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -18,8 +18,23 @@ async function initDb() {
     );
   `;
 
-    await pool.query(query);
+    const auditQuery = `
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id SERIAL PRIMARY KEY,
+      service_name VARCHAR(100) NOT NULL,
+      entity_type VARCHAR(100) NOT NULL,
+      entity_id INTEGER,
+      action VARCHAR(100) NOT NULL,
+      actor VARCHAR(255) NOT NULL DEFAULT 'system',
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+    await pool.query(itemsQuery);
+    await pool.query(auditQuery);
     console.log("Table 'items' is ready.");
+    console.log("Table 'audit_logs' is ready.");
 }
 
 module.exports = initDb;

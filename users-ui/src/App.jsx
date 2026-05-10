@@ -3,10 +3,11 @@ import "./styles.css";
 
 const API_BASE = "http://localhost:8010";
 
-async function request(path, options = {}) {
+async function request(path, token, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
     ...options,
@@ -26,7 +27,8 @@ async function request(path, options = {}) {
   return data;
 }
 
-export default function App({ currentUser }) {
+export default function App({ currentUser, authToken }) {
+  const isAdmin = currentUser?.role === "ADMIN";
   const [users, setUsers] = useState([]);
   const [userLookupId, setUserLookupId] = useState("");
   const [roleForm, setRoleForm] = useState({ userId: "", role: "USER" });
@@ -34,12 +36,19 @@ export default function App({ currentUser }) {
   const [feedback, setFeedback] = useState("Modul uporabnikov je pripravljen.");
 
   async function loadUsers() {
-    const data = await request("/api/users");
+    const data = await request("/api/users", authToken);
     setUsers(data);
   }
 
   async function loadUserById(id) {
-    const user = await request(`/api/users/${id}`);
+    const user = await request(`/api/users/${id}`, authToken);
+    setSelected(user);
+    setRoleForm({ userId: user.id, role: user.role || "USER" });
+    setUserLookupId(user.id);
+  }
+
+  async function loadOwnProfile() {
+    const user = await request("/api/users/me", authToken);
     setSelected(user);
     setRoleForm({ userId: user.id, role: user.role || "USER" });
     setUserLookupId(user.id);
@@ -47,7 +56,7 @@ export default function App({ currentUser }) {
 
   async function updateRole(event) {
     event.preventDefault();
-    const user = await request(`/api/users/${roleForm.userId}/role`, {
+    const user = await request(`/api/users/${roleForm.userId}/role`, authToken, {
       method: "PUT",
       body: JSON.stringify({ role: roleForm.role }),
     });
@@ -57,7 +66,7 @@ export default function App({ currentUser }) {
   }
 
   async function deleteUser(id) {
-    await request(`/api/users/${id}`, { method: "DELETE" });
+    await request(`/api/users/${id}`, authToken, { method: "DELETE" });
     setFeedback(`Uporabnik ${id} je bil izbrisan.`);
     if (selected?.id === id) {
       setSelected(null);
@@ -66,8 +75,12 @@ export default function App({ currentUser }) {
   }
 
   useEffect(() => {
-    loadUsers().catch((error) => setFeedback(error.message));
-  }, []);
+    if (isAdmin) {
+      loadUsers().catch((error) => setFeedback(error.message));
+    } else {
+      loadOwnProfile().catch((error) => setFeedback(error.message));
+    }
+  }, [authToken, isAdmin]);
 
   useEffect(() => {
     if (currentUser) {
@@ -79,15 +92,6 @@ export default function App({ currentUser }) {
 
   return (
     <section className="domain">
-      <header className="domain-header">
-        <div>
-          <h2>Uporabniki Micro Frontend</h2>
-        </div>
-        <button type="button" className="ghost-button" onClick={() => loadUsers().catch((error) => setFeedback(error.message))}>
-          Osveži seznam
-        </button>
-      </header>
-
       <p className="feedback">{feedback}</p>
 
       <div className="domain-grid">
@@ -102,13 +106,19 @@ export default function App({ currentUser }) {
               <button type="button" onClick={() => loadUserById(userLookupId).catch((error) => setFeedback(error.message))}>
                 Naloži uporabnika
               </button>
+              {!isAdmin ? (
+                <button type="button" className="ghost-button" onClick={() => loadOwnProfile().catch((error) => setFeedback(error.message))}>
+                  Moj profil
+                </button>
+              ) : null}
             </div>
           </div>
           <div className="lookup">
-            <pre>{JSON.stringify(currentUser, null, 2)}</pre>
+            <pre>{JSON.stringify(selected || currentUser, null, 2)}</pre>
           </div>
         </article>
 
+        {isAdmin ? (
         <article className="panel">
           <h3>Spremeni vlogo</h3>
           <form className="form-grid compact" onSubmit={updateRole}>
@@ -128,6 +138,12 @@ export default function App({ currentUser }) {
             </div>
           </form>
         </article>
+        ) : (
+        <article className="panel">
+          <h3>Dovoljenja uporabnika</h3>
+          <p className="feedback">Kot USER lahko vidiš le svoj profil. Sprememba vlog in brisanje uporabnikov sta omejena na ADMIN.</p>
+        </article>
+        )}
       </div>
 
       <div className="domain-grid">
@@ -136,6 +152,7 @@ export default function App({ currentUser }) {
           <pre>{JSON.stringify(selected, null, 2)}</pre>
         </article>
 
+        {isAdmin ? (
         <article className="panel">
           <h3>Seznam uporabnikov</h3>
           <div className="table-wrap">
@@ -180,6 +197,7 @@ export default function App({ currentUser }) {
             </table>
           </div>
         </article>
+        ) : null}
       </div>
     </section>
   );
