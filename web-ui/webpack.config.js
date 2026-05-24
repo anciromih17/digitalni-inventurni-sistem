@@ -2,10 +2,11 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
 
 const deps = require("./package.json").dependencies;
+const isDevServer = process.argv.includes("serve");
 
 module.exports = {
   output: {
-    publicPath: "http://localhost:3000/",
+    publicPath: isDevServer ? "http://localhost:3000/" : "auto",
   },
   resolve: {
     extensions: [".js", ".jsx"],
@@ -40,9 +41,15 @@ module.exports = {
     new ModuleFederationPlugin({
       name: "shell",
       remotes: {
-        inventory: "inventory@http://localhost:3001/remoteEntry.js",
-        reservations: "reservations@http://localhost:3002/remoteEntry.js",
-        users: "users@http://localhost:3003/remoteEntry.js",
+        inventory: isDevServer
+          ? "inventory@http://localhost:3001/remoteEntry.js"
+          : "inventory@/inventory-remote/remoteEntry.js",
+        reservations: isDevServer
+          ? "reservations@http://localhost:3002/remoteEntry.js"
+          : "reservations@/reservations-remote/remoteEntry.js",
+        users: isDevServer
+          ? "users@http://localhost:3003/remoteEntry.js"
+          : "users@/users-remote/remoteEntry.js",
       },
       shared: {
         ...deps,

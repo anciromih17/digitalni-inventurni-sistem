@@ -11,7 +11,7 @@ const InventoryApp = React.lazy(() => import("inventory/App"));
 const ReservationsApp = React.lazy(() => import("reservations/App"));
 const UsersApp = React.lazy(() => import("users/App"));
 
-const API_BASE = "http://localhost:8010";
+const API_BASE = window.location.hostname === "localhost" ? "http://localhost:8010" : "/api-gateway";
 
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: dashboardIcon, component: null },

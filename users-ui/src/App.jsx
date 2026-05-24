@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./styles.css";
 
-const API_BASE = "http://localhost:8010";
+const API_BASE = window.location.hostname === "localhost" ? "http://localhost:8010" : "/api-gateway";
 
 async function request(path, token, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
