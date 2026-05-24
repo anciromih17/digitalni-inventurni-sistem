@@ -2,10 +2,11 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
 
 const deps = require("./package.json").dependencies;
+const isDevServer = process.argv.includes("serve");
 
 module.exports = {
   output: {
-    publicPath: "http://localhost:3003/",
+    publicPath: isDevServer ? "http://localhost:3003/" : "auto",
   },
   resolve: {
     extensions: [".js", ".jsx"],
