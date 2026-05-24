@@ -420,3 +420,130 @@ Workflow `docker-publish.yml` objavlja slike za:
 - `inventory-ui`
 - `reservations-ui`
 - `users-ui`
+
+## Naloga 7 - Vzorci MSA
+
+Za dopolnitev sistema sta implementirana dva dodatna vzorca mikrostoritvene arhitekture:
+
+- `Revizijsko beleženje`
+- `Žeton za dostop (JWT)`
+
+- inventurni sistem potrebuje sledljivost pomembnih sprememb,
+- sistem vsebuje različne uporabniške vloge in občutljive operacije, zato potrebuje tudi avtorizacijo dostopa.
+
+### 1. Revizijsko beleženje
+
+**Kaj vzorec rešuje**
+
+Revizijsko beleženje omogoča sledljivost poslovno pomembnih operacij v sistemu. Pri inventurnem sistemu je pomembno, da lahko za nazaj ugotovimo:
+
+- kdo je ustvaril ali posodobil opremo,
+- kdo je ustvaril, posodobil, izbrisal ali vrnil rezervacijo,
+- kdo je registriral uporabnika,
+- kdo je spremenil uporabniško vlogo,
+- kdo je izbrisal uporabnika.
+
+**Zakaj je ta vzorec smiseln**
+
+Ta vzorec je smiseln, ker digitalni inventurni sistem upravlja podatke, ki imajo jasno zgodovino odgovornosti in uporabe. Z vidika domene je pomembno, da obstaja pregled nad spremembami opreme, rezervacij in uporabnikov.
+
+**Kako je implementirano**
+
+Audit zapis se ustvari ob poslovno pomembnih operacijah v vseh treh domenskih mikrostoritvah. Vsaka storitev ima svoj model oziroma tabelo/kolekcijo za audit zapise. `web-bff` nato te zapise agregira in jih izpostavi na enem mestu.
+
+**Kje je implementirano**
+
+`Inventar`
+
+- `inventar/src/config/initDb.js`
+- `inventar/src/repositories/auditRepository.js`
+- `inventar/src/services/auditService.js`
+- `inventar/src/services/itemService.js`
+- `inventar/src/grpc/grpcServer.js`
+
+`Rezervacije`
+
+- `rezervacije/app/models/audit_log.py`
+- `rezervacije/app/repositories/audit_repository.py`
+- `rezervacije/app/services/audit_service.py`
+- `rezervacije/app/services/reservation_service.py`
+- `rezervacije/app/api/reservation_api.py`
+
+`Uporabniki`
+
+- `uporabniki/src/main/java/com/inventar/userservice/model/AuditLog.java`
+- `uporabniki/src/main/java/com/inventar/userservice/repository/AuditLogRepository.java`
+- `uporabniki/src/main/java/com/inventar/userservice/service/AuditLogService.java`
+- `uporabniki/src/main/java/com/inventar/userservice/service/UserService.java`
+- `uporabniki/src/main/java/com/inventar/userservice/controller/UserController.java`
+
+`Agregacija in prikaz`
+
+- `web-bff/src/app.js`
+- `web-ui/src/App.jsx`
+
+### 2. Žeton za dostop (JWT)
+
+**Kaj vzorec rešuje**
+
+JWT žeton za dostop omogoča, da sistem preveri, ali je uporabnik prijavljen in ali ima dovolj pravic za izvajanje posamezne operacije.
+
+**Zakaj je ta vzorec smiseln**
+
+Ta vzorec je smiseln, ker ima sistem vsaj dve vlogi:
+
+- `USER`
+- `ADMIN`
+
+Uporabnika nimata enakih pravic, zato mora sistem razlikovati med navadnim uporabnikom in administratorjem.
+
+V sistemu so pravila dostopa implementirana tako:
+
+- `USER`
+  - lahko pregleda inventar,
+  - lahko ustvari rezervacijo,
+  - lahko vidi svoje podatke,
+  - lahko vidi svoje rezervacije.
+- `ADMIN`
+  - lahko dodaja, posodablja in briše opremo,
+  - lahko spreminja role uporabnikov,
+  - lahko briše uporabnike,
+  - lahko vidi vse audit zapise.
+
+**Kako je implementirano**
+
+Po uspešni prijavi `web-bff` izda JWT žeton. Frontend shrani žeton in ga pošilja v `Authorization: Bearer ...` glavi pri naslednjih requestih. `web-bff` žeton preveri, iz njega prebere identiteto in vlogo uporabnika ter glede na vlogo dovoli ali zavrne posamezne operacije.
+
+Tako je `web-bff` osrednja točka za avtorizacijo v sistemu.
+
+**Kje je implementirano**
+
+`JWT logika in preverjanje`
+
+- `web-bff/src/auth.js`
+- `web-bff/src/app.js`
+
+`Prijava uporabnika`
+
+- `uporabniki/src/main/java/com/inventar/userservice/controller/UserController.java`
+- `uporabniki/src/main/java/com/inventar/userservice/service/UserService.java`
+- `uporabniki/src/test/java/com/inventar/userservice/UserControllerTest.java`
+
+`Shranjevanje žetona in pošiljanje iz frontenda`
+
+- `web-ui/src/App.jsx`
+- `inventory-ui/src/App.jsx`
+- `reservations-ui/src/App.jsx`
+- `users-ui/src/App.jsx`
+
+### Povzetek razlogov za izbiro vzorcev
+
+Vzorec `Revizijsko beleženje` je bil izbran zaradi sledljivosti in preglednosti sprememb v inventurnem sistemu.
+
+Vzorec `Žeton za dostop (JWT)` je bil izbran zaradi potrebe po varnem dostopu in avtorizaciji glede na uporabniške vloge.
+
+Skupaj ta dva vzorca pokrijeta:
+
+- `sledljivost poslovnih operacij`,
+- `varnost in nadzor dostopa`,
+- `realističen scenarij uporabe mikrostoritvenega sistema v praksi`.
