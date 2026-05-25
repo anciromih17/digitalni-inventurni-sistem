@@ -545,3 +545,395 @@ Skupaj ta dva vzorca pokrijeta:
 - `sledljivost poslovnih operacij`,
 - `varnost in nadzor dostopa`,
 - `realističen scenarij uporabe mikrostoritvenega sistema v praksi`.
+
+## Naloga 8 - OpenShift
+
+Za uvedbo sistema na `Red Hat OpenShift Developer Sandbox` je bil uporabljen vizualni pristop iz navodil in PDF-ja, torej ročna uvedba komponent prek `Container images` v OpenShift GUI.
+
+### Kaj je bilo uvedeno v OpenShift
+
+Ustvarjene so bile naslednje komponente:
+
+`Podatkovni in infrastrukturni sloj`
+
+- `inventory-db`
+- `reservations-db`
+- `users-db`
+- `activemq`
+
+`Domenske mikrostoritve`
+
+- `inventory-service`
+- `reservations-service`
+- `users-service`
+
+`Prehodi / gateway sloj`
+
+- `web-bff`
+- `mobile-bff`
+
+`Frontend micro frontend sloj`
+
+- `inventory-ui`
+- `reservations-ui`
+- `users-ui`
+- `web-ui`
+
+Za vsako komponento so bili nastavljeni:
+
+- ustrezen Docker image iz DockerHub,
+- `Deployment`,
+- `Service`,
+- pri zunanje dostopnih komponentah tudi `Route`,
+- `readiness`, `liveness` in `startup` health checki,
+- environment variable za medsebojno komunikacijo.
+
+### Kaj je bilo treba popraviti, da je sistem deloval v OpenShiftu
+
+#### 1. Frontendi niso smeli ostati vezani na `localhost`
+
+Lokalna varianta je uporabljala `localhost` naslove za:
+
+- `web-bff`,
+- remote micro frontend module,
+- API klice.
+
+To v OpenShift okolju ne deluje, ker komponente tečejo v ločenih podih in se povezujejo prek internih `Service` imen ter prek proxya.
+
+Zato so bile spremenjene datoteke:
+
+- `web-ui/webpack.config.js`
+- `inventory-ui/webpack.config.js`
+- `reservations-ui/webpack.config.js`
+- `users-ui/webpack.config.js`
+
+#### 2. Frontendi so morali v produkciji uporabljati relativne poti
+
+V vseh frontendih je bil API base nastavljen tako, da:
+
+- v development načinu uporablja `http://localhost:8010`
+- v OpenShift/production načinu uporablja `/api-gateway`
+
+Spremenjene datoteke:
+
+- `web-ui/src/App.jsx`
+- `inventory-ui/src/App.jsx`
+- `reservations-ui/src/App.jsx`
+- `users-ui/src/App.jsx`
+
+#### 3. Nginx slike za UI so morale biti OpenShift-safe
+
+Navaden nginx image je v OpenShift sandboxu padal zaradi `Permission denied` napak pri pisanju v `/var/cache/nginx/...`.
+
+Zato je bil zamenjan image v Dockerfile-jih:
+
+- iz klasičnega nginx image-a
+- v `nginxinc/nginx-unprivileged:1.27-alpine`
+
+Poleg tega vsi UI moduli v OpenShiftu poslušajo na portu `8080`.
+
+Spremenjene datoteke:
+
+- `web-ui/Dockerfile`
+- `inventory-ui/Dockerfile`
+- `reservations-ui/Dockerfile`
+- `users-ui/Dockerfile`
+
+#### 4. `web-ui` je moral postati shell proxy za API in remote module
+
+V OpenShiftu `web-ui` deluje kot glavna javna vstopna točka za frontend.
+
+Prek `nginx.conf` proxyja:
+
+- `/api-gateway/` -> `web-bff:8010`
+- `/inventory-remote/` -> `inventory-ui:8080`
+- `/reservations-remote/` -> `reservations-ui:8080`
+- `/users-remote/` -> `users-ui:8080`
+
+Spremenjene datoteke:
+
+- `web-ui/nginx.conf`
+- `inventory-ui/nginx.conf`
+- `reservations-ui/nginx.conf`
+- `users-ui/nginx.conf`
+
+#### 5. Popravek `web-ui` proxya za `remoteEntry.js`
+
+Pri prvem OpenShift zagonu je shell ob kliku na zavihek vračal:
+
+- `404 Not Found`
+- `ScriptExternalLoadError`
+
+Razlog je bil v `web-ui/nginx.conf`, kjer je splošno pravilo:
+
+```nginx
+location ~* \.(js|css|html|json)$
+```
+
+prehitelo bolj specifične poti, kot je `/inventory-remote/remoteEntry.js`.
+
+Zato so bile lokacije popravljene v:
+
+- `location ^~ /api-gateway/`
+- `location ^~ /inventory-remote/`
+- `location ^~ /reservations-remote/`
+- `location ^~ /users-remote/`
+
+To je omogočilo pravilno nalaganje Module Federation remote datotek.
+
+#### 6. `reservations-service` je potreboval dva popravka
+
+Najprej je padal zaradi krožnega importa v gRPC paketu.
+
+Popravljena datoteka:
+
+- `rezervacije/app/grpc/__init__.py`
+
+Nato pa je Docker imageu manjkalo:
+
+- `inventory_pb2.py`
+- `inventory_pb2_grpc.py`
+
+ker ju je ignoriral `.gitignore`.
+
+Zato je bil popravljen:
+
+- `.gitignore`
+
+in v repo sta bili vključeni še datoteki:
+
+- `rezervacije/app/grpc/inventory_pb2.py`
+- `rezervacije/app/grpc/inventory_pb2_grpc.py`
+
+#### 7. `users-service` in bootstrap admin uporabnika
+
+Ob sveži OpenShift postavitvi sistem ni imel nobenih podatkov, zato se je bilo treba registrirati znova.
+
+Pri registraciji pa se v kodi vedno nastavi:
+
+```java
+user.setRole(Role.USER);
+```
+
+v datoteki:
+
+- `uporabniki/src/main/java/com/inventar/userservice/service/UserService.java`
+
+Zato je bilo treba v Mongo bazi ročno enega uporabnika povišati v `ADMIN`, da je bilo mogoče uporabljati administratorske funkcionalnosti.
+
+### Kako se komponente v OpenShiftu povezujejo med sabo
+
+Podi niso ročno povezani v Topology pogledu. Topology prikaz je samo vizualizacija.
+
+Prava komunikacija med komponentami poteka prek:
+
+- `Service` imen,
+- internega OpenShift / Kubernetes DNS,
+- `Route` za zunanji dostop,
+- `nginx` proxya v `web-ui`,
+- environment variable v deploymentih.
+
+Primeri:
+
+- `inventory-service` dostopa do baze prek `inventory-db`
+- `reservations-service` dostopa do baze prek `reservations-db`
+- `users-service` dostopa do Mongo baze prek `users-db`
+- `reservations-service` kliče gRPC prek `inventory-service:50051`
+- `web-bff` kliče backend storitve prek:
+  - `http://inventory-service:8000`
+  - `http://reservations-service:8001`
+  - `http://users-service:8002`
+- `mobile-bff` uporablja enak princip
+- `web-ui` shell kliče:
+  - backend prek `/api-gateway/`
+  - remote UI module prek `/inventory-remote/`, `/reservations-remote/`, `/users-remote/`
+
+Torej:
+
+- podi se ne povezujejo s črtami v GUI,
+- povezujejo se prek `Service` objektov in internega DNS-a.
+
+### Kaj je bilo spremenjeno v `webpack.config.js`
+
+OpenShift del je zahteval spremembe v vseh štirih webpack konfiguracijah frontendov:
+
+- `web-ui/webpack.config.js`
+- `inventory-ui/webpack.config.js`
+- `reservations-ui/webpack.config.js`
+- `users-ui/webpack.config.js`
+
+#### Sprememba 1: ločevanje development in production okolja
+
+Dodan je bil:
+
+```js
+const isDevServer = process.argv.includes("serve");
+```
+
+Namen:
+
+- če teče `webpack serve`, uporabljamo lokalne `localhost` URL-je
+- če delamo produkcijski build za OpenShift, uporabimo `auto` oziroma relativne poti
+
+#### Sprememba 2: `publicPath`
+
+Pri remote aplikacijah je bilo nastavljeno:
+
+```js
+output: {
+  publicPath: isDevServer ? "http://localhost:3001/" : "auto",
+}
+```
+
+oziroma ustrezno za `3002` in `3003`.
+
+Namen:
+
+- lokalno se chunki nalagajo z `localhost`
+- v OpenShiftu pa webpack sam izračuna pravo osnovno pot
+
+Pri shellu (`web-ui`) je bilo enako:
+
+```js
+output: {
+  publicPath: isDevServer ? "http://localhost:3000/" : "auto",
+}
+```
+
+#### Sprememba 3: remotes v shell aplikaciji
+
+V `web-ui/webpack.config.js` so bili remotes spremenjeni tako, da:
+
+lokalno ostanejo:
+
+```js
+inventory@http://localhost:3001/remoteEntry.js
+reservations@http://localhost:3002/remoteEntry.js
+users@http://localhost:3003/remoteEntry.js
+```
+
+v OpenShift produkciji pa postanejo:
+
+```js
+inventory@/inventory-remote/remoteEntry.js
+reservations@/reservations-remote/remoteEntry.js
+users@/users-remote/remoteEntry.js
+```
+
+To je bil ključen del, da je shell lahko nalagal remote module prek `web-ui` nginx proxya.
+
+### Kaj so `remoteEntry.js` datoteke in čemu služijo
+
+`remoteEntry.js` je osrednja datoteka, ki jo ustvari `Webpack Module Federation` za vsak remote micro frontend.
+
+Pri tebi jo ustvarijo:
+
+- `inventory-ui`
+- `reservations-ui`
+- `users-ui`
+
+Njena vloga je:
+
+- da shell aplikaciji pove, katere komponente remote modul izpostavlja,
+- da omogoči dinamično nalaganje modula,
+- da vsebuje Module Federation runtime metapodatke.
+
+Pri tebi remote moduli izpostavljajo:
+
+```js
+exposes: {
+  "./App": "./src/App.jsx",
+}
+```
+
+To pomeni:
+
+- shell naloži `remoteEntry.js`
+- iz njega dobi dostop do `./App`
+- nato v `web-ui/src/App.jsx` preko `React.lazy(() => import("inventory/App"))` ali podobno naloži konkreten modul
+
+Če `remoteEntry.js` ne obstaja ali vrača `404`, shell ne more naložiti zavihka in uporabnik vidi:
+
+- črno stran,
+- `ScriptExternalLoadError`,
+- ali `Failed to load resource: 404`
+
+### Kaj je bilo spremenjeno v `App.jsx` datotekah
+
+#### 1. `web-ui/src/App.jsx`
+
+Spremembe:
+
+- `API_BASE` je bil prilagojen, da v produkciji uporablja `/api-gateway`
+- shell zdaj dela v OpenShiftu prek proxya namesto direktnih `localhost` klicev
+- shell uporablja Module Federation remote module imena:
+  - `inventory/App`
+  - `reservations/App`
+  - `users/App`
+- po prijavi shrani JWT sejo v `localStorage`
+- upravlja `dashboard`, `history`, `inventory`, `reservations`, `users` poglede
+
+Namen:
+
+- da je shell enotna vstopna točka v OpenShiftu
+- da kliče backend prek `web-bff`
+- da nalaga remote module prek nginx proxya
+
+#### 2. `inventory-ui/src/App.jsx`
+
+Spremembe:
+
+- `API_BASE` je bil prilagojen z `localhost -> /api-gateway`
+- vsi requesti zdaj gredo prek `web-bff`
+- upoštevana je uporabniška vloga:
+  - `ADMIN` lahko dodaja, ureja, briše
+  - `USER` lahko samo pregleduje
+
+Namen:
+
+- da inventory module deluje tako lokalno kot v OpenShiftu
+- da ne kliče več direktno lokalnega BFF-ja
+
+#### 3. `reservations-ui/src/App.jsx`
+
+Spremembe:
+
+- `API_BASE` je bil prilagojen na `/api-gateway`
+- UI uporablja paketno izbiro opreme za rezervacijo
+- upošteva JWT in uporabniško vlogo
+- omogoča ustvarjanje, posodabljanje in vračilo rezervacij
+
+Namen:
+
+- da tudi reservations remote deluje z `web-bff` v OpenShiftu
+
+#### 4. `users-ui/src/App.jsx`
+
+Spremembe:
+
+- `API_BASE` je bil prilagojen na `/api-gateway`
+- UI je bil poenostavljen, da v OpenShiftu uporablja obstoječo sejo in token
+- za `USER` prikazuje samo lasten profil
+- za `ADMIN` omogoča:
+  - seznam vseh uporabnikov
+  - spremembo vloge
+  - brisanje uporabnikov
+
+Namen:
+
+- da users module ne dela več kot testna login stran,
+- ampak kot pravi uporabniški administracijski modul.
+
+### Povzetek OpenShift dela
+
+Za uspešno uvedbo v OpenShift je bilo treba:
+
+- prilagoditi nginx slike in porte,
+- odstraniti odvisnost od `localhost`,
+- uvesti `web-ui` proxy do API-ja in remote modulov,
+- popraviti Module Federation poti,
+- popraviti `reservations-service` gRPC import in generated datoteke,
+- ročno bootstrapati admin uporabnika v Mongo bazi,
+- uporabiti pravilne `sha-...` Docker tage, da se izogne cache težavam.
+
+S tem je sistem postal delujoč tudi v OpenShift clusterju in ne samo v lokalnem Docker okolju.
