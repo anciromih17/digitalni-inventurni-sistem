@@ -12,10 +12,24 @@ async function requestJson(url, options = {}) {
   }
 
   const rawBody = await response.text();
-  const data = rawBody ? JSON.parse(rawBody) : null;
+  let data = null;
+
+  if (rawBody) {
+    try {
+      data = JSON.parse(rawBody);
+    } catch (error) {
+      data = {
+        raw: rawBody,
+      };
+    }
+  }
 
   if (!response.ok) {
-    const message = data?.error || data?.detail || `Upstream request failed: ${response.status}`;
+    const message =
+      data?.error ||
+      data?.detail ||
+      data?.raw ||
+      `Upstream request failed: ${response.status}`;
     const error = new Error(message);
     error.status = response.status;
     error.payload = data;
